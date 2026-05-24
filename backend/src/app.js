@@ -1,9 +1,9 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import './config/env.js';
+import { requestLogger } from "./config/logger.js";
 
 const app = express();
 
@@ -16,9 +16,9 @@ app.use(cors(
   }
 ));
 
-app.use(helmet());
-app.use(morgan("dev"));
 app.use(cookieParser());
+
+app.use(requestLogger);
 
 
 app.get("/", (req, res) => {
