@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import './config/env.js';
 import { requestLogger } from "./config/logger.js";
+import authRoutes from "./modules/auth-system/auth.routes.js";
 
 const app = express();
 
@@ -27,6 +28,8 @@ app.get("/", (req, res) => {
     message: "Smart Mart API running",
   });
 });
+
+app.use("/api/auth", authRoutes);
 
 
 export default app;

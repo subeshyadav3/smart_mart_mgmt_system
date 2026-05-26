@@ -1,7 +1,7 @@
-import bcrypt from "bcrypt";
 import '../src/config/env.js';
-import { prisma } from '../src/config/db.js';
+import prisma from '../src/config/db.js';
 import { PrismaClient, Role, ProductStatus, BillStatus, PaymentMethod } from '@prisma/client'
+import { hashPassword } from '../src/utils/password.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function daysAgo(number){
@@ -18,19 +18,23 @@ function randomBetween(min, max) {
 async function main() {
   console.log('🌱 Seeding database...')
 
-  // ── Cleanup (order matters – children first) ──────────────────────────────
-  await prisma.billItem.deleteMany()
-  await prisma.bill.deleteMany()
-  await prisma.inventoryLog.deleteMany()
-  await prisma.product.deleteMany()
-  await prisma.category.deleteMany()
-  await prisma.member.deleteMany()
-  await prisma.staff.deleteMany()
-  console.log('🗑️  Cleared existing data')
+  try {
+    // ── Cleanup (order matters – children first) ──────────────────────────────
+    console.log('🗑️  Clearing existing data...')
+    await prisma.billItem.deleteMany()
+    await prisma.bill.deleteMany()
+    await prisma.inventoryLog.deleteMany()
+    await prisma.product.deleteMany()
+    await prisma.category.deleteMany()
+    await prisma.member.deleteMany()
+    await prisma.staff.deleteMany()
+    console.log('✅ Cleared existing data')
 
-  // ── Passwords ─────────────────────────────────────────────────────────────
-  const adminPwd = await bcrypt.hash('Admin@123', 10)
-  const staffPwd = await bcrypt.hash('Staff@123', 10)
+    // ── Passwords ─────────────────────────────────────────────────────────────
+    console.log('🔐 Hashing passwords...')
+    const adminPwd = await hashPassword('Admin@123')
+    const staffPwd = await hashPassword('Staff@123')
+    console.log('✅ Passwords hashed')
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STAFF  (2 Admins + 6 Staff)
@@ -116,23 +120,30 @@ async function main() {
     staffData.map(d => prisma.staff.create({ data: d }))
   )
   console.log(`✅ Created ${staffRecords.length} staff members`)
+  
+  if (staffRecords.length === 0) {
+    throw new Error('No staff records created!')
+  }
 
   const [admin1, admin2, staff1, staff2, staff3, staff4, , staff6] = staffRecords
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MEMBERS  (10 loyalty members)
   // ═══════════════════════════════════════════════════════════════════════════
-  const memberData = [
-    { membershipId: 'MBR-2024-0001', fullName: 'Ramesh Hamal',     phoneNumber: '9801001001', loyaltyPoints: 3450, totalSpent: 34500,  createdAt: daysAgo(340) },
-    { membershipId: 'MBR-2024-0002', fullName: 'Kamala Devi',      phoneNumber: '9801001002', loyaltyPoints: 1280, totalSpent: 12800,  createdAt: daysAgo(310) },
-    { membershipId: 'MBR-2024-0003', fullName: 'Suresh Poudel',    phoneNumber: '9801001003', loyaltyPoints: 5670, totalSpent: 56700,  createdAt: daysAgo(280) },
-    { membershipId: 'MBR-2024-0004', fullName: 'Gita Tamang',      phoneNumber: '9801001004', loyaltyPoints: 890,  totalSpent: 8900,   createdAt: daysAgo(260) },
-    { membershipId: 'MBR-2024-0005', fullName: 'Naresh Basnet',    phoneNumber: '9801001005', loyaltyPoints: 2100, totalSpent: 21000,  createdAt: daysAgo(230) },
-    { membershipId: 'MBR-2024-0006', fullName: 'Sunita Maharjan',  phoneNumber: '9801001006', loyaltyPoints: 760,  totalSpent: 7600,   createdAt: daysAgo(200) },
-    { membershipId: 'MBR-2024-0007', fullName: 'Binod Chaudhary',  phoneNumber: '9801001007', loyaltyPoints: 4320, totalSpent: 43200,  createdAt: daysAgo(170) },
-    { membershipId: 'MBR-2024-0008', fullName: 'Laxmi Magar',      phoneNumber: '9801001008', loyaltyPoints: 1950, totalSpent: 19500,  createdAt: daysAgo(140) },
-    { membershipId: 'MBR-2024-0009', fullName: 'Prakash Limbu',    phoneNumber: '9801001009', loyaltyPoints: 320,  totalSpent: 3200,   createdAt: daysAgo(90)  },
-    { membershipId: 'MBR-2024-0010', fullName: 'Menuka Acharya',   phoneNumber: '9801001010', loyaltyPoints: 610,  totalSpent: 6100,   createdAt: daysAgo(45)  },
+    console.log('👥 Creating members...')
+    const memberPwd = await hashPassword('Member@123')
+    
+    const memberData = [
+      { membershipId: 'MBR-2024-0001', fullName: 'Ramesh Hamal',     phoneNumber: '9801001001', password: memberPwd, loyaltyPoints: 3450, totalSpent: 34500,  createdAt: daysAgo(340) },
+      { membershipId: 'MBR-2024-0002', fullName: 'Kamala Devi',      phoneNumber: '9801001002', password: memberPwd, loyaltyPoints: 1280, totalSpent: 12800,  createdAt: daysAgo(310) },
+      { membershipId: 'MBR-2024-0003', fullName: 'Suresh Poudel',    phoneNumber: '9801001003', password: memberPwd, loyaltyPoints: 5670, totalSpent: 56700,  createdAt: daysAgo(280) },
+    { membershipId: 'MBR-2024-0004', fullName: 'Gita Tamang',      phoneNumber: '9801001004', password: memberPwd, loyaltyPoints: 890,  totalSpent: 8900,   createdAt: daysAgo(260) },
+    { membershipId: 'MBR-2024-0005', fullName: 'Naresh Basnet',    phoneNumber: '9801001005', password: memberPwd, loyaltyPoints: 2100, totalSpent: 21000,  createdAt: daysAgo(230) },
+    { membershipId: 'MBR-2024-0006', fullName: 'Sunita Maharjan',  phoneNumber: '9801001006', password: memberPwd, loyaltyPoints: 760,  totalSpent: 7600,   createdAt: daysAgo(200) },
+    { membershipId: 'MBR-2024-0007', fullName: 'Binod Chaudhary',  phoneNumber: '9801001007', password: memberPwd, loyaltyPoints: 4320, totalSpent: 43200,  createdAt: daysAgo(170) },
+    { membershipId: 'MBR-2024-0008', fullName: 'Laxmi Magar',      phoneNumber: '9801001008', password: memberPwd, loyaltyPoints: 1950, totalSpent: 19500,  createdAt: daysAgo(140) },
+    { membershipId: 'MBR-2024-0009', fullName: 'Prakash Limbu',    phoneNumber: '9801001009', password: memberPwd, loyaltyPoints: 320,  totalSpent: 3200,   createdAt: daysAgo(90)  },
+    { membershipId: 'MBR-2024-0010', fullName: 'Menuka Acharya',   phoneNumber: '9801001010', password: memberPwd, loyaltyPoints: 610,  totalSpent: 6100,   createdAt: daysAgo(45)  },
   ]
 
   const memberRecords = await Promise.all(
@@ -433,8 +444,19 @@ async function main() {
   console.log('   Admin  → aarav.sharma@shopease.com  / Admin@123')
   console.log('   Admin  → priya.thapa@shopease.com   / Admin@123')
   console.log('   Staff  → bikash.karki@shopease.com  / Staff@123')
+  } catch (error) {
+    console.error('❌ Error during seeding:', error.message)
+    if (error.code) console.error('   Code:', error.code)
+    throw error
+  }
 }
 
 main()
-  .catch(e => { console.error(e); process.exit(1) })
-  .finally(() => prisma.$disconnect())
+  .catch(e => { 
+    console.error('❌ Seed error:', e); 
+    process.exit(1) 
+  })
+  .finally(async () => { 
+    await prisma.$disconnect();
+    process.exit(0);
+  })

@@ -25,6 +25,7 @@ model Member {
   membershipId  String   @unique
   fullName      String
   phoneNumber   String   @unique
+  password      String
   loyaltyPoints Int      @default(0)
   totalSpent    Decimal  @default(0)
   isActive      Boolean  @default(true)
