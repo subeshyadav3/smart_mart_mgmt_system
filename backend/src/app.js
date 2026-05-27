@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import './config/env.js';
 import { requestLogger } from "./config/logger.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 import authRoutes from "./modules/auth-system/auth.routes.js";
 import productRoutes from "./modules/product-inventory-system/product.routes.js";
 import workforceRoutes from "./modules/workforce-management/workforce.routes.js";
@@ -37,5 +38,6 @@ app.use("/api/products", productRoutes);
 app.use("/api/workforce", workforceRoutes);
 app.use("/api/sales", salesRoutes);
 
+app.use(errorMiddleware);
 
 export default app;

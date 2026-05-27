@@ -35,3 +35,12 @@ export const getInvoice = async (req, res, next) => {
     next(err);
   }
 };
+
+export const cancelSale = async (req, res, next) => {
+  try {
+    const result = await salesService.cancelSale(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};

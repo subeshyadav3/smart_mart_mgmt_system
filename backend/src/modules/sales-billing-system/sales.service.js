@@ -11,10 +11,40 @@ const BILL_STATUS = {
 };
 
 const PAYMENT_METHODS = new Set(["CASH", "CARD", "DIGITAL_WALLET"]);
+const BILL_INCLUDE = {
+  billItems: {
+    include: {
+      product: true,
+    },
+  },
+  member: true,
+  createdBy: true,
+};
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+const MAX_PAGE_LIMIT = 100;
 
 const parseNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parsePositiveInt = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const normalizeStatus = (value) => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  return Object.values(BILL_STATUS).includes(normalized) ? normalized : null;
+};
+
+const parseDate = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const toDecimalString = (value) => parseNumber(value).toString();
@@ -70,13 +100,65 @@ const calculateLineTotals = (product, item) => {
   };
 };
 
+const getBillById = async (id, tx = prisma) =>
+  tx.bill.findUnique({
+    where: { id },
+    include: BILL_INCLUDE,
+  });
+
+const assertBillExists = (bill) => {
+  if (!bill) {
+    throw new AppError("Sale not found", 404);
+  }
+};
+
+const restoreInventoryForCancelledBill = async (tx, bill) => {
+  if (bill.status !== BILL_STATUS.COMPLETED) return;
+
+  for (const item of bill.billItems) {
+    const previousStock = item.product.stockQuantity;
+    const newStock = previousStock + item.quantity;
+
+    await tx.product.update({
+      where: { id: item.product.id },
+      data: {
+        stockQuantity: newStock,
+        status: newStock <= 0 ? "OUT_OF_STOCK" : "ACTIVE",
+      },
+    });
+
+    await tx.inventoryLog.create({
+      data: {
+        productId: item.product.id,
+        updatedById: bill.createdById,
+        previousStock,
+        newStock,
+        changeAmount: item.quantity,
+        reason: `Sale cancelled: ${bill.billNumber}`,
+      },
+    });
+  }
+
+  if (bill.memberId) {
+    const loyaltyPoints = Math.floor(parseNumber(bill.finalAmount) / LOYALTY_POINT_RATE);
+    await tx.member.update({
+      where: { id: bill.memberId },
+      data: {
+        loyaltyPoints: { decrement: loyaltyPoints },
+        totalSpent: { decrement: bill.finalAmount },
+      },
+    });
+  }
+};
+
 export const createSale = async (payload) => {
   const { items, cashierId, paymentMethod, status = BILL_STATUS.COMPLETED } = payload;
   const memberId = getMemberId(payload);
+  const normalizedStatus = normalizeStatus(status) || BILL_STATUS.COMPLETED;
 
   validateCreatePayload({ items, cashierId, paymentMethod });
 
-  if (![BILL_STATUS.COMPLETED, BILL_STATUS.PENDING].includes(status)) {
+  if (![BILL_STATUS.COMPLETED, BILL_STATUS.PENDING].includes(normalizedStatus)) {
     throw new AppError("Invalid bill status", 400);
   }
 
@@ -156,12 +238,12 @@ export const createSale = async (payload) => {
         subtotal: toDecimalString(subtotal),
         totalDiscount: toDecimalString(totalDiscount),
         finalAmount: toDecimalString(finalAmount),
-        status,
+        status: normalizedStatus,
         paymentMethod,
       },
     });
 
-    if (status === BILL_STATUS.COMPLETED) {
+    if (normalizedStatus === BILL_STATUS.COMPLETED) {
       for (const item of normalizedItems) {
         const previousStock = item.product.stockQuantity;
         const newStock = previousStock - item.quantity;
@@ -225,24 +307,13 @@ export const createSale = async (payload) => {
       }
     }
 
-    return tx.bill.findUnique({
-      where: { id: createdBill.id },
-      include: {
-        billItems: {
-          include: {
-            product: true,
-          },
-        },
-        member: true,
-        createdBy: true,
-      },
-    });
+    return getBillById(createdBill.id, tx);
   });
 
   return {
     success: true,
     statusCode: 201,
-    message: status === BILL_STATUS.COMPLETED ? "Sale created" : "Bill created",
+    message: normalizedStatus === BILL_STATUS.COMPLETED ? "Sale created" : "Bill created",
     data: {
       ...buildBillResponse(bill),
       loyaltyPointsEarned,
@@ -252,8 +323,8 @@ export const createSale = async (payload) => {
 
 export const listSales = async (query = {}) => {
   const {
-    page = 1,
-    limit = 20,
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
     memberId,
     customerId,
     cashierId,
@@ -263,13 +334,18 @@ export const listSales = async (query = {}) => {
     endDate,
   } = query;
 
-  const skip = (Number(page) - 1) * Number(limit);
+  const safePage = parsePositiveInt(page, DEFAULT_PAGE);
+  const safeLimit = Math.min(parsePositiveInt(limit, DEFAULT_LIMIT), MAX_PAGE_LIMIT);
+  const skip = (safePage - 1) * safeLimit;
   const resolvedMemberId = memberId || customerId;
+  const normalizedStatus = normalizeStatus(status);
+  const parsedStartDate = parseDate(startDate);
+  const parsedEndDate = parseDate(endDate);
 
   const where = {};
   if (resolvedMemberId) where.memberId = resolvedMemberId;
   if (cashierId) where.createdById = cashierId;
-  if (status) where.status = status;
+  if (normalizedStatus) where.status = normalizedStatus;
 
   if (search) {
     where.OR = [
@@ -280,27 +356,19 @@ export const listSales = async (query = {}) => {
     ];
   }
 
-  if (startDate || endDate) {
+  if (parsedStartDate || parsedEndDate) {
     where.createdAt = {};
-    if (startDate) where.createdAt.gte = new Date(startDate);
-    if (endDate) where.createdAt.lte = new Date(endDate);
+    if (parsedStartDate) where.createdAt.gte = parsedStartDate;
+    if (parsedEndDate) where.createdAt.lte = parsedEndDate;
   }
 
   const [data, total] = await Promise.all([
     prisma.bill.findMany({
       where,
       skip,
-      take: Number(limit),
+      take: safeLimit,
       orderBy: { createdAt: "desc" },
-      include: {
-        billItems: {
-          include: {
-            product: true,
-          },
-        },
-        member: true,
-        createdBy: true,
-      },
+      include: BILL_INCLUDE,
     }),
     prisma.bill.count({ where }),
   ]);
@@ -309,27 +377,13 @@ export const listSales = async (query = {}) => {
     success: true,
     statusCode: 200,
     data: data.map(buildBillResponse),
-    meta: { total, page: Number(page), limit: Number(limit) },
+    meta: { total, page: safePage, limit: safeLimit },
   };
 };
 
 export const getSaleById = async (id) => {
-  const bill = await prisma.bill.findUnique({
-    where: { id },
-    include: {
-      billItems: {
-        include: {
-          product: true,
-        },
-      },
-      member: true,
-      createdBy: true,
-    },
-  });
-
-  if (!bill) {
-    throw new AppError("Sale not found", 404);
-  }
+  const bill = await getBillById(id);
+  assertBillExists(bill);
 
   return {
     success: true,
@@ -339,22 +393,8 @@ export const getSaleById = async (id) => {
 };
 
 export const getInvoice = async (id) => {
-  const bill = await prisma.bill.findUnique({
-    where: { id },
-    include: {
-      billItems: {
-        include: {
-          product: true,
-        },
-      },
-      member: true,
-      createdBy: true,
-    },
-  });
-
-  if (!bill) {
-    throw new AppError("Sale not found", 404);
-  }
+  const bill = await getBillById(id);
+  assertBillExists(bill);
 
   const invoice = {
     invoiceNumber: bill.billNumber,
@@ -380,5 +420,31 @@ export const getInvoice = async (id) => {
     success: true,
     statusCode: 200,
     data: invoice,
+  };
+};
+
+export const cancelSale = async (id) => {
+  const bill = await getBillById(id);
+  assertBillExists(bill);
+
+  if (bill.status === BILL_STATUS.CANCELLED) {
+    throw new AppError("Sale is already cancelled", 400);
+  }
+
+  const updatedBill = await prisma.$transaction(async (tx) => {
+    await restoreInventoryForCancelledBill(tx, bill);
+
+    return tx.bill.update({
+      where: { id },
+      data: { status: BILL_STATUS.CANCELLED },
+      include: BILL_INCLUDE,
+    });
+  });
+
+  return {
+    success: true,
+    statusCode: 200,
+    message: "Sale cancelled",
+    data: buildBillResponse(updatedBill),
   };
 };
