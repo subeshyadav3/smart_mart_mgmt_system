@@ -7,7 +7,7 @@ import { requestLogger } from "./config/logger.js";
 import authRoutes from "./modules/auth-system/auth.routes.js";
 import productRoutes from "./modules/product-inventory-system/product.routes.js";
 import workforceRoutes from "./modules/workforce-management/workforce.routes.js";
-// import salesRoutes from "./modules/sales-billing-system/sales.routes.js";
+import salesRoutes from "./modules/sales-billing-system/sales.routes.js";
 
 const app = express();
 
@@ -35,7 +35,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/workforce", workforceRoutes);
-// app.use("/api/sales", salesRoutes);
+app.use("/api/sales", salesRoutes);
 
 
 export default app;
