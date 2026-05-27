@@ -5,7 +5,6 @@ import { hashPassword } from "../../utils/password.js";
 
 export const staffLogin = async (req, res, next) => {
   try {
-    console.log("Login attempt:", req.body);
     const result = await authService.staffLogin(req.body);
     res.json(result);
   } catch (err) {

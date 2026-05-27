@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import './config/env.js';
 import { requestLogger } from "./config/logger.js";
 import authRoutes from "./modules/auth-system/auth.routes.js";
+import productRoutes from "./modules/product-inventory-system/product.routes.js";
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 
 
 export default app;
