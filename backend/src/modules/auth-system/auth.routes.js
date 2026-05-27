@@ -10,10 +10,6 @@ import {
   getAllMembers,
   getSingleMember,
   updateMemberStatus,
-  createStaff,
-  getAllStaffs,
-  updateStaffRole,
-  updateStaffStatus,
 } from "./auth.controller.js";
 
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
@@ -37,12 +33,6 @@ router.get("/members/:id", authMiddleware, authorizeRoles("ADMIN", "STAFF"), get
 
 router.patch("/members/:id/status", authMiddleware, authorizeRoles("ADMIN", "STAFF"), updateMemberStatus);
 
-router.post("/staff/create", authMiddleware, authorizeRoles("ADMIN"), createStaff);
 
-router.get("/staffs", authMiddleware, authorizeRoles("ADMIN"), getAllStaffs);
-
-router.patch("/staffs/:id/role", authMiddleware, authorizeRoles("ADMIN"), updateStaffRole);
-
-router.patch("/staffs/:id/status", authMiddleware, authorizeRoles("ADMIN"), updateStaffStatus);
 
 export default router;
