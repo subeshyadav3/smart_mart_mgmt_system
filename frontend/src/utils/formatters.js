@@ -1,8 +1,8 @@
 export const formatCurrency = (value) => {
   const number = Number(value ?? 0);
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('ne-NP', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'NPR',
     maximumFractionDigits: 2,
   }).format(Number.isFinite(number) ? number : 0);
 };
