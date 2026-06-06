@@ -30,15 +30,22 @@ export default function AppLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="app-shell">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans">
       <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
-      <div className={`app-content ${menuOpen ? 'menu-open' : ''}`}>
+      
+      <div className="flex flex-col flex-1 min-w-0">
         <Topbar onMenuClick={() => setMenuOpen((value) => !value)} title={current[0]} subtitle={current[1]} />
-        <main className="main-area">
+        <main className="flex-1 p-6 md:p-8 max-w-[1400px] w-full mx-auto box-border">
           <Outlet context={{ role: user?.role, type: user?.type }} />
         </main>
       </div>
-      {menuOpen ? <div className="overlay" onClick={() => setMenuOpen(false)} /> : null}
+
+      {menuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-30 md:hidden" 
+          onClick={() => setMenuOpen(false)} 
+        />
+      )}
     </div>
   );
 }

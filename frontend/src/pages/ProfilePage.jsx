@@ -3,7 +3,6 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card, { CardBody, CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
-import EmptyState from '../components/ui/EmptyState';
 import GuardedMessage from '../components/layout/GuardedMessage';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -14,44 +13,35 @@ export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const { showToast } = useToast();
   const isMember = user?.type === 'MEMBER';
-  const canEdit = Boolean(user);
 
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ fullName: '', phoneNumber: '', email: '', password: '' });
 
   useEffect(() => {
-    setForm({
-      fullName: user?.fullName || '',
-      phoneNumber: user?.phoneNumber || '',
-      email: user?.email || '',
-      password: '',
-    });
+    if (user) {
+      setForm({
+        fullName: user.fullName || '',
+        phoneNumber: user.phoneNumber || '',
+        email: user.email || '',
+        password: '',
+      });
+    }
   }, [user]);
 
-  if (!canEdit) {
-    return <GuardedMessage title="Access denied" description="No active profile session was found." />;
-  }
+  if (!user) return <GuardedMessage title="Session Expired" description="Please log in to view your profile." />;
 
-  const submit = async (event) => {
-    event.preventDefault();
+  const handleUpdate = async (e) => {
+    e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
-        fullName: form.fullName,
-        phoneNumber: form.phoneNumber,
-      };
-
-      if (user?.type === 'STAFF') {
-        payload.email = form.email;
-      }
-      if (form.password) {
-        payload.password = form.password;
-      }
+      const payload = { fullName: form.fullName, phoneNumber: form.phoneNumber };
+      if (user.type === 'STAFF') payload.email = form.email;
+      if (form.password) payload.password = form.password;
 
       await updateCurrentUser(payload);
       await refreshUser();
       showToast('Profile updated successfully');
-      setForm((current) => ({ ...current, password: '' }));
+      setForm(prev => ({ ...prev, password: '' }));
     } catch (err) {
       showToast(err.message, 'danger');
     } finally {
@@ -60,32 +50,38 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="page-stack">
+    <div className="max-w-4xl mx-auto flex flex-col gap-6">
       <Card>
-        <CardHeader
-          title="Profile"
-          subtitle="Edit your own account information only."
-          actions={<Badge tone={user?.isActive ? 'success' : 'danger'}>{user?.isActive ? 'Active' : 'Inactive'}</Badge>}
+        <CardHeader 
+          title="Your Account" 
+          subtitle="Manage your personal information and security."
+          actions={<Badge tone={user.isActive ? 'success' : 'danger'}>{user.isActive ? 'Active Account' : 'Inactive'}</Badge>}
         />
-        <CardBody>
-          {isMember ? (
-            <div className="info-list" style={{ marginBottom: 16 }}>
-              <div><span>Membership ID</span><strong>{user?.membershipId || '-'}</strong></div>
-              <div><span>Loyalty points</span><strong>{formatNumber(user?.loyaltyPoints)}</strong></div>
-              <div><span>Total spent</span><strong>{formatCurrency(user?.totalSpent)}</strong></div>
-              <div><span>Joined</span><strong>{formatDateTime(user?.createdAt)}</strong></div>
+        <CardBody className="flex flex-col gap-8">
+          {isMember && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <div className="flex flex-col"><span className="text-xs text-slate-500 uppercase font-semibold">Member ID</span><span className="font-mono">{user.membershipId}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-slate-500 uppercase font-semibold">Points</span><span>{formatNumber(user.loyaltyPoints)}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-slate-500 uppercase font-semibold">Lifetime Spend</span><span>{formatCurrency(user.totalSpent)}</span></div>
+              <div className="flex flex-col"><span className="text-xs text-slate-500 uppercase font-semibold">Member Since</span><span>{formatDateTime(user.createdAt)}</span></div>
             </div>
-          ) : null}
+          )}
 
-          <form onSubmit={submit} className="form-grid two-columns">
-            <Input label="Full name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} />
-            <Input label="Phone number" value={form.phoneNumber} onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })} />
-            {user?.type === 'STAFF' ? (
-              <Input label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
-            ) : null}
-            <Input label="New password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} hint="Leave blank to keep current password" />
-            <div className="form-grid-actions">
-              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save profile'}</Button>
+          <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input label="Full Name" value={form.fullName} onChange={(e) => setForm({...form, fullName: e.target.value})} />
+            <Input label="Phone Number" value={form.phoneNumber} onChange={(e) => setForm({...form, phoneNumber: e.target.value})} />
+            {user.type === 'STAFF' && (
+              <Input label="Email Address" type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} />
+            )}
+            <Input 
+              label="Change Password" 
+              type="password" 
+              value={form.password} 
+              onChange={(e) => setForm({...form, password: e.target.value})} 
+              hint="Only fill this if you want to change your current password."
+            />
+            <div className="md:col-span-2 pt-4 border-t border-slate-100">
+              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
             </div>
           </form>
         </CardBody>

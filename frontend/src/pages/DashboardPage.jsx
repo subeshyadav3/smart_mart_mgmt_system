@@ -104,39 +104,50 @@ export default function DashboardPage() {
 
   if (user?.type === 'MEMBER') {
     return (
-      <div className="page-stack">
-        <div className="dashboard-hero">
+      <div className="flex flex-col gap-6">
+        <div className="bg-white border border-slate-200 rounded-lg p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="eyebrow">Member portal</p>
-            <h2>Welcome back, {user?.fullName || 'Member'}</h2>
-            <p>View your membership profile, loyalty points, and recent purchases.</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Member portal</p>
+            <h2 className="text-xl font-bold text-slate-900">Welcome back, {user?.fullName || 'Member'}</h2>
+            <p className="text-sm text-slate-500 mt-0.5">View your membership profile, loyalty points, and recent purchases.</p>
           </div>
-          <Badge tone={user?.isActive ? 'success' : 'danger'}>{user?.isActive ? 'Active' : 'Inactive'}</Badge>
+          <div className="self-start sm:self-center">
+            <Badge tone={user?.isActive ? 'success' : 'danger'}>{user?.isActive ? 'Active' : 'Inactive'}</Badge>
+          </div>
         </div>
 
-        <section className="stats-grid">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {stats.map((item) => (
             <StatCard key={item.label} {...item} />
           ))}
         </section>
 
-        <section className="grid-2">
-          <Card>
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
             <CardHeader title="Profile" subtitle="Membership details" />
-            <CardBody>
-              <div className="info-list">
-                <div><span>Full name</span><strong>{user?.fullName || '-'}</strong></div>
-                <div><span>Phone number</span><strong>{user?.phoneNumber || '-'}</strong></div>
-                <div><span>Member since</span><strong>{formatDateTime(user?.createdAt)}</strong></div>
+            <CardBody className="p-5">
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                  <span className="text-sm text-slate-500">Full name</span>
+                  <strong className="text-sm font-semibold text-slate-800">{user?.fullName || '-'}</strong>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                  <span className="text-sm text-slate-500">Phone number</span>
+                  <strong className="text-sm font-semibold text-slate-800">{user?.phoneNumber || '-'}</strong>
+                </div>
+                <div className="flex justify-between items-center border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                  <span className="text-sm text-slate-500">Member since</span>
+                  <strong className="text-sm font-semibold text-slate-800">{formatDateTime(user?.createdAt)}</strong>
+                </div>
               </div>
             </CardBody>
           </Card>
 
-          <Card>
+          <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
             <CardHeader title="Recent purchases" subtitle="Latest bills for this account" />
-            <CardBody>
+            <CardBody className="p-0">
               {loading ? (
-                <div className="empty-table">Loading purchases...</div>
+                <div className="p-6 text-center text-sm text-slate-400">Loading purchases...</div>
               ) : payload.sales?.length ? (
                 <DataTable
                   columns={[
@@ -148,7 +159,9 @@ export default function DashboardPage() {
                   rows={payload.sales}
                 />
               ) : (
-                <EmptyState title="No purchases yet" description="Sales history will appear here after your first checkout." />
+                <div className="p-6">
+                  <EmptyState title="No purchases yet" description="Sales history will appear here after your first checkout." />
+                </div>
               )}
             </CardBody>
           </Card>
@@ -158,7 +171,11 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return <div className="center-screen">Loading dashboard...</div>;
+    return (
+      <div className="min-h-[400px] flex items-center justify-center text-sm text-slate-400 font-medium">
+        Loading dashboard...
+      </div>
+    );
   }
 
   const topMembers = payload.analytics?.topMembers || [];
@@ -167,17 +184,17 @@ export default function DashboardPage() {
   const paymentBreakdown = payload.analytics?.paymentBreakdown || [];
 
   return (
-    <div className="page-stack">
-      <section className="stats-grid">
+    <div className="flex flex-col gap-6">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((item) => (
           <StatCard key={item.label} {...item} />
         ))}
       </section>
 
-      <section className="grid-2">
-        <Card>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
           <CardHeader title="Recent products" subtitle="Inventory snapshot" />
-          <CardBody>
+          <CardBody className="p-0">
             {payload.products.length ? (
               <DataTable
                 columns={[
@@ -189,14 +206,16 @@ export default function DashboardPage() {
                 rows={payload.products}
               />
             ) : (
-              <EmptyState title="No products yet" description="Add your first product to start managing stock." />
+              <div className="p-6">
+                <EmptyState title="No products yet" description="Add your first product to start managing stock." />
+              </div>
             )}
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
           <CardHeader title={user?.role === 'ADMIN' ? 'Recent sales' : 'My recent sales'} subtitle="Latest checkout activity" />
-          <CardBody>
+          <CardBody className="p-0">
             {payload.sales.length ? (
               <DataTable
                 columns={[
@@ -208,16 +227,18 @@ export default function DashboardPage() {
                 rows={payload.sales}
               />
             ) : (
-              <EmptyState title="No sales yet" description="Checkout records will appear after bills are created." />
+              <div className="p-6">
+                <EmptyState title="No sales yet" description="Checkout records will appear after bills are created." />
+              </div>
             )}
           </CardBody>
         </Card>
       </section>
 
-      <section className="grid-2">
-        <Card>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
           <CardHeader title="Sales over time" subtitle={user?.role === 'ADMIN' ? 'Trend for all completed sales' : 'Trend for your completed sales'} />
-          <CardBody>
+          <CardBody className="p-0">
             {salesOverTime.length ? (
               <DataTable
                 columns={[
@@ -228,14 +249,16 @@ export default function DashboardPage() {
                 rows={salesOverTime}
               />
             ) : (
-              <EmptyState title="No trend data yet" description="Completed sales will populate this graph table automatically." />
+              <div className="p-6">
+                <EmptyState title="No trend data yet" description="Completed sales will populate this graph table automatically." />
+              </div>
             )}
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
           <CardHeader title="Payment mix" subtitle="Distribution of payment methods" />
-          <CardBody>
+          <CardBody className="p-0">
             {paymentBreakdown.length ? (
               <DataTable
                 columns={[
@@ -245,16 +268,18 @@ export default function DashboardPage() {
                 rows={paymentBreakdown}
               />
             ) : (
-              <EmptyState title="No payment data" description="Payment analytics will appear after completed transactions." />
+              <div className="p-6">
+                <EmptyState title="No payment data" description="Payment analytics will appear after completed transactions." />
+              </div>
             )}
           </CardBody>
         </Card>
       </section>
 
-      <section className="grid-2">
-        <Card>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
           <CardHeader title="Top 5 membership customers" subtitle="Highest spenders in selected period" />
-          <CardBody>
+          <CardBody className="p-0">
             {topMembers.length ? (
               <DataTable
                 columns={[
@@ -266,26 +291,30 @@ export default function DashboardPage() {
                 rows={topMembers}
               />
             ) : (
-              <EmptyState title="No member spenders yet" description="Top membership customers appear after linked member purchases." />
+              <div className="p-6">
+                <EmptyState title="No member spenders yet" description="Top membership customers appear after linked member purchases." />
+              </div>
             )}
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
           <CardHeader title="Top performing products" subtitle="Best revenue products in period" />
-          <CardBody>
+          <CardBody className="p-0">
             {topProducts.length ? (
               <DataTable
                 columns={[
                   { key: 'name', label: 'Product' },
                   { key: 'sku', label: 'SKU' },
-                  { key: 'quantity', label: 'Qty sold' },
+                  { key: 'text-[13px] text-slate-500', label: 'Qty sold', key: 'quantity' },
                   { key: 'revenue', label: 'Revenue', render: (row) => formatCurrency(row.revenue) },
                 ]}
                 rows={topProducts}
               />
             ) : (
-              <EmptyState title="No product analytics yet" description="Product EDA will populate as sales are created." />
+              <div className="p-6">
+                <EmptyState title="No product analytics yet" description="Product EDA will populate as sales are created." />
+              </div>
             )}
           </CardBody>
         </Card>

@@ -18,6 +18,7 @@ export default function MembersPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const canManage = ['ADMIN', 'STAFF'].includes(user?.role);
+
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -30,6 +31,8 @@ export default function MembersPage() {
     try {
       const response = await listMembers();
       setMembers(response?.data || []);
+    } catch (err) {
+      showToast(err.message, 'danger');
     } finally {
       setLoading(false);
     }
@@ -40,51 +43,10 @@ export default function MembersPage() {
     else setLoading(false);
   }, [canManage]);
 
-  const openCreate = () => {
-    setEditingMember(null);
-    setForm(emptyMember);
-    setEditorOpen(true);
-  };
-
-  const openEdit = (member) => {
-    setEditingMember(member);
-    setForm({
-      fullName: member.fullName || '',
-      phoneNumber: member.phoneNumber || '',
-      password: '',
-    });
-    setEditorOpen(true);
-  };
-
-  const columns = useMemo(
-    () => [
-      { key: 'fullName', label: 'Name' },
-      { key: 'membershipId', label: 'Membership ID' },
-      { key: 'phoneNumber', label: 'Phone' },
-      { key: 'loyaltyPoints', label: 'Points' },
-      { key: 'isActive', label: 'Status', render: (row) => <Badge tone={row.isActive ? 'success' : 'danger'}>{row.isActive ? 'Active' : 'Inactive'}</Badge> },
-      { key: 'createdAt', label: 'Joined', render: (row) => formatDateTime(row.createdAt) },
-      {
-        key: 'actions',
-        label: 'Actions',
-        render: (row) => (
-          <div className="inline-actions">
-            <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>Edit</Button>
-            <Button variant="ghost" size="sm" onClick={() => toggleStatus(row)}>
-              {row.isActive ? 'Deactivate' : 'Activate'}
-            </Button>
-            <Button variant="danger" size="sm" onClick={() => removeMember(row)}>Delete</Button>
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
-
   const toggleStatus = async (member) => {
     try {
       await updateMemberStatus(member.id, !member.isActive);
-      showToast('Member status updated');
+      showToast(`Member ${member.isActive ? 'deactivated' : 'activated'} successfully`);
       await loadMembers();
     } catch (err) {
       showToast(err.message, 'danger');
@@ -92,36 +54,30 @@ export default function MembersPage() {
   };
 
   const removeMember = async (member) => {
-    if (!window.confirm(`Delete member ${member.fullName}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete ${member.fullName}?`)) return;
     try {
       await deleteMember(member.id);
-      showToast('Member deleted');
+      showToast('Member deleted permanently');
       await loadMembers();
     } catch (err) {
       showToast(err.message, 'danger');
     }
   };
 
-  const submitMember = async (event) => {
-    event.preventDefault();
+  const submitMember = async (e) => {
+    e.preventDefault();
     setSaving(true);
     try {
       if (editingMember?.id) {
-        const payload = {
-          fullName: form.fullName,
-          phoneNumber: form.phoneNumber,
-        };
+        const payload = { fullName: form.fullName, phoneNumber: form.phoneNumber };
         if (form.password) payload.password = form.password;
         await updateMember(editingMember.id, payload);
-        showToast('Member updated');
+        showToast('Member details updated');
       } else {
         await createMember(form);
-        showToast('Member created');
+        showToast('New member registered');
       }
-
-      setForm(emptyMember);
       setEditorOpen(false);
-      setEditingMember(null);
       await loadMembers();
     } catch (err) {
       showToast(err.message, 'danger');
@@ -130,49 +86,68 @@ export default function MembersPage() {
     }
   };
 
-  if (!canManage) {
-    return <GuardedMessage title="Access denied" description="Only staff and administrators can manage member records." />;
-  }
+  const columns = useMemo(() => [
+    { key: 'fullName', label: 'Name' },
+    { key: 'membershipId', label: 'ID', render: (row) => <code className="text-xs font-mono">{row.membershipId}</code> },
+    { key: 'phoneNumber', label: 'Phone' },
+    { key: 'loyaltyPoints', label: 'Points', render: (row) => row.loyaltyPoints?.toLocaleString() || 0 },
+    { key: 'isActive', label: 'Status', render: (row) => <Badge tone={row.isActive ? 'success' : 'danger'}>{row.isActive ? 'Active' : 'Inactive'}</Badge> },
+    { key: 'createdAt', label: 'Joined', render: (row) => formatDateTime(row.createdAt) },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (row) => (
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => { setEditingMember(row); setForm({ ...row, password: '' }); setEditorOpen(true); }}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => toggleStatus(row)}>{row.isActive ? 'Deactivate' : 'Activate'}</Button>
+          <Button variant="danger" size="sm" onClick={() => removeMember(row)}>Delete</Button>
+        </div>
+      ),
+    },
+  ], []);
+
+  if (!canManage) return <GuardedMessage title="Access denied" description="Only staff and administrators can manage member records." />;
 
   return (
-    <div className="page-stack">
+    <div className="flex flex-col gap-6">
       <Card>
-        <CardHeader
-          title="Members"
-          subtitle="Create, edit, deactivate, and delete membership accounts."
-          actions={<Button onClick={openCreate}>New member</Button>}
+        <CardHeader 
+          title="Members" 
+          subtitle="Manage loyalty members and customer accounts." 
+          actions={<Button onClick={() => { setEditingMember(null); setForm(emptyMember); setEditorOpen(true); }}>New Member</Button>} 
         />
-        <CardBody>
+        <CardBody className="p-0">
           {loading ? (
-            <div className="empty-table">Loading members...</div>
+            <div className="p-12 text-center text-slate-500">Loading directory...</div>
           ) : members.length ? (
             <DataTable columns={columns} rows={members} />
           ) : (
-            <EmptyState title="No members found" description="Create a membership account to get started." actionLabel="New member" onAction={openCreate} />
+            <div className="p-6">
+              <EmptyState title="No members" description="Start by adding your first customer." actionLabel="New Member" onAction={() => setEditorOpen(true)} />
+            </div>
           )}
         </CardBody>
       </Card>
 
       <Modal
         open={editorOpen}
-        title={editingMember ? 'Edit member' : 'Create member'}
-        description="For updates, password is optional (leave blank to keep existing)."
+        title={editingMember ? 'Edit Member' : 'Register Member'}
         onClose={() => setEditorOpen(false)}
         footer={
-          <>
+          <div className="flex justify-end gap-3 w-full">
             <Button variant="ghost" onClick={() => setEditorOpen(false)}>Cancel</Button>
-            <Button onClick={submitMember} disabled={saving}>{saving ? 'Saving...' : editingMember ? 'Update member' : 'Create member'}</Button>
-          </>
+            <Button onClick={submitMember} disabled={saving}>{saving ? 'Saving...' : 'Confirm'}</Button>
+          </div>
         }
       >
-        <div className="form-grid">
-          <Input label="Full name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} />
-          <Input label="Phone number" value={form.phoneNumber} onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })} />
-          <Input
-            label={editingMember ? 'New password (optional)' : 'Password'}
-            type="password"
-            value={form.password}
-            onChange={(event) => setForm({ ...form, password: event.target.value })}
+        <div className="grid grid-cols-1 gap-4">
+          <Input label="Full Name" value={form.fullName} onChange={(e) => setForm({...form, fullName: e.target.value})} required />
+          <Input label="Phone Number" value={form.phoneNumber} onChange={(e) => setForm({...form, phoneNumber: e.target.value})} required />
+          <Input 
+            label={editingMember ? "New Password (Optional)" : "Password"} 
+            type="password" 
+            value={form.password} 
+            onChange={(e) => setForm({...form, password: e.target.value})} 
           />
         </div>
       </Modal>

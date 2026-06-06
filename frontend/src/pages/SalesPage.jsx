@@ -63,7 +63,6 @@ export default function SalesPage() {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, search]);
 
   const productLookup = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
@@ -210,7 +209,7 @@ export default function SalesPage() {
         key: 'actions',
         label: 'Actions',
         render: (row) => (
-          <div className="inline-actions">
+          <div className="flex items-center gap-2">
             <Button size="sm" variant="secondary" onClick={() => openSaleDetail(row)}>View</Button>
             {canCreate ? (
               <Button size="sm" variant="ghost" onClick={() => openEditSale(row)} disabled={!canEditSaleNow(row)}>
@@ -229,14 +228,16 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="page-stack">
-      <Card>
+    <div className="flex flex-col gap-6">
+      <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
         <CardHeader
           title="Sales register"
           subtitle={canCreate ? 'Create sales, preview invoice totals, and manage/edit bills with audit visibility.' : 'Review your sales history and bill details.'}
           actions={
-            <div className="header-actions">
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search bill, member, or cashier" />
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <div className="w-full sm:w-64">
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search bill, member, or cashier" />
+              </div>
               <Button onClick={loadData}>Search</Button>
               {canCreate ? (
                 <Button variant="secondary" onClick={openCreate}>New sale</Button>
@@ -244,14 +245,18 @@ export default function SalesPage() {
             </div>
           }
         />
-        <CardBody>
-          {loading ? (
-            <div className="empty-table">Loading sales...</div>
-          ) : sales.length ? (
-            <DataTable columns={columns} rows={sales} />
-          ) : (
-            <EmptyState title="No sales found" description="Bills created from the checkout form will appear here." actionLabel={canCreate ? 'New sale' : undefined} onAction={openCreate} />
-          )}
+        <CardBody className="p-0">
+          <div className="border border-slate-100 rounded-lg overflow-hidden m-6">
+            {loading ? (
+              <div className="p-12 text-center text-sm text-slate-400 font-medium">Loading sales...</div>
+            ) : sales.length ? (
+              <DataTable columns={columns} rows={sales} />
+            ) : (
+              <div className="p-6">
+                <EmptyState title="No sales found" description="Bills created from the checkout form will appear here." actionLabel={canCreate ? 'New sale' : undefined} onAction={openCreate} />
+              </div>
+            )}
+          </div>
         </CardBody>
       </Card>
 
@@ -261,16 +266,16 @@ export default function SalesPage() {
         description="Add products using the plus button, preview invoice totals, then submit."
         onClose={() => setCreateOpen(false)}
         footer={
-          <>
+          <div className="flex justify-end gap-2 w-full">
             <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
             <Button variant="secondary" onClick={() => setInvoiceOpen((prev) => !prev)}>
               {invoiceOpen ? 'Hide invoice preview' : 'Show invoice preview'}
             </Button>
             <Button onClick={submitSale} disabled={saving}>{saving ? 'Processing...' : editingSale ? 'Update sale' : 'Create sale'}</Button>
-          </>
+          </div>
         }
       >
-        <div className="form-grid two-columns">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <Input label="Member ID" value={draft.memberId} onChange={(event) => setDraft({ ...draft, memberId: event.target.value })} placeholder="Optional" />
           <Select label="Payment method" value={draft.paymentMethod} onChange={(event) => setDraft({ ...draft, paymentMethod: event.target.value })}>
             <option value="CASH">Cash</option>
@@ -283,57 +288,69 @@ export default function SalesPage() {
           </Select>
         </div>
 
-        <div className="line-items">
-          <div className="line-items-head">
-            <h4>Items</h4>
+        <div className="flex flex-col gap-4 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-slate-900">Items</h4>
             <Button variant="secondary" size="sm" onClick={addItem}>+ Add product</Button>
           </div>
 
-          {draft.items.map((item, index) => {
-            const selectedProduct = productLookup.get(item.productId);
-            return (
-              <div className="line-item" key={index}>
-                <Select label={`Product ${index + 1}`} value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)}>
-                  <option value="">Select product</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} — {formatCurrency(product.sellingPrice)}
-                    </option>
-                  ))}
-                </Select>
-                <Input label="Qty" type="number" min="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} />
-                <Input label="Discount %" type="number" min="0" step="0.01" value={item.discountPercent} onChange={(event) => updateItem(index, 'discountPercent', event.target.value)} />
-                <div className="line-item-actions">
-                  <Button variant="ghost" size="sm" onClick={() => removeItem(index)}>Remove</Button>
-                  <p className="muted-text">{selectedProduct ? `Stock ${selectedProduct.stockQuantity}` : 'Choose a product'}</p>
+          <div className="flex flex-col gap-4 max-h-[350px] overflow-y-auto pr-1">
+            {draft.items.map((item, index) => {
+              const selectedProduct = productLookup.get(item.productId);
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-slate-50/50 border border-slate-100 rounded-lg p-4 relative" key={index}>
+                  <div className="md:col-span-5">
+                    <Select label={`Product ${index + 1}`} value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)}>
+                      <option value="">Select product</option>
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} — {formatCurrency(product.sellingPrice)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Input label="Qty" type="number" min="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Input label="Discount %" type="number" min="0" step="0.01" value={item.discountPercent} onChange={(event) => updateItem(index, 'discountPercent', event.target.value)} />
+                  </div>
+                  <div className="md:col-span-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2 md:mt-0">
+                    <Button variant="ghost" size="sm" className="text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => removeItem(index)}>Remove</Button>
+                    <p className="text-xs font-medium text-slate-400 truncate max-w-[120px]">{selectedProduct ? `Stock: ${selectedProduct.stockQuantity}` : 'No selection'}</p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {invoiceOpen ? (
-          <Card className="mt-12">
-            <CardHeader title="Invoice preview" subtitle="Review before finalizing this sale" />
-            <CardBody>
-              {draftSummary.rows.length ? (
-                <DataTable
-                  columns={[
-                    { key: 'product', label: 'Product', render: (row) => row.product.name },
-                    { key: 'qty', label: 'Qty' },
-                    { key: 'price', label: 'Price', render: (row) => formatCurrency(row.price) },
-                    { key: 'discountPercent', label: 'Discount %' },
-                    { key: 'total', label: 'Line total', render: (row) => formatCurrency(row.total) },
-                  ]}
-                  rows={draftSummary.rows}
-                />
-              ) : (
-                <EmptyState title="No items" description="Add at least one product to see invoice preview." />
-              )}
-              <div className="info-list" style={{ marginTop: 12 }}>
-                <div><span>Subtotal</span><strong>{formatCurrency(draftSummary.subtotal)}</strong></div>
-                <div><span>Total Discount</span><strong>{formatCurrency(draftSummary.discount)}</strong></div>
-                <div><span>Grand Total</span><strong>{formatCurrency(draftSummary.grandTotal)}</strong></div>
+          <Card className="mt-6 bg-slate-50 border border-slate-200/60 rounded-lg shadow-none">
+            <CardHeader title="Invoice preview" subtitle="Review before finalizing this sale" className="pb-2" />
+            <CardBody className="p-4 flex flex-col gap-4">
+              <div className="border border-slate-100 rounded-lg overflow-hidden bg-white">
+                {draftSummary.rows.length ? (
+                  <DataTable
+                    columns={[
+                      { key: 'product', label: 'Product', render: (row) => row.product.name },
+                      { key: 'qty', label: 'Qty' },
+                      { key: 'price', label: 'Price', render: (row) => formatCurrency(row.price) },
+                      { key: 'discountPercent', label: 'Discount %' },
+                      { key: 'total', label: 'Line total', render: (row) => formatCurrency(row.total) },
+                    ]}
+                    rows={draftSummary.rows}
+                  />
+                ) : (
+                  <div className="p-4">
+                    <EmptyState title="No items" description="Add at least one product to see invoice preview." />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 max-w-xs ml-auto w-full text-sm border-t border-slate-200/60 pt-3">
+                <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatCurrency(draftSummary.subtotal)}</span></div>
+                <div className="flex justify-between text-slate-500"><span>Total Discount</span><span className="text-emerald-600">-{formatCurrency(draftSummary.discount)}</span></div>
+                <div className="flex justify-between text-base font-bold text-slate-900 border-t border-slate-200/60 pt-2 mt-1"><span>Grand Total</span><span>{formatCurrency(draftSummary.grandTotal)}</span></div>
               </div>
             </CardBody>
           </Card>
@@ -345,63 +362,76 @@ export default function SalesPage() {
         title={saleDetail ? `Sale details: ${saleDetail.billNumber}` : 'Sale details'}
         description="Detailed items, cashier info, and edit logs for this bill."
         onClose={() => setDetailOpen(false)}
-        footer={<Button onClick={() => setDetailOpen(false)}>Close</Button>}
+        footer={
+          <div className="flex justify-end w-full">
+            <Button onClick={() => setDetailOpen(false)}>Close</Button>
+          </div>
+        }
       >
         {saleDetail ? (
-          <div className="page-stack">
-            <Card>
-              <CardHeader title="Bill overview" subtitle="Core checkout information" />
-              <CardBody>
-                <div className="info-list">
-                  <div><span>Customer</span><strong>{saleDetail.customer?.fullName || saleDetail.member?.fullName || 'Walk-in customer'}</strong></div>
-                  <div><span>Cashier</span><strong>{saleDetail.cashier?.fullName || saleDetail.createdBy?.fullName || '-'}</strong></div>
-                  <div><span>Status</span><strong>{saleDetail.status}</strong></div>
-                  <div><span>Payment</span><strong>{saleDetail.paymentMethod}</strong></div>
-                  <div><span>Editable until</span><strong>{saleDetail.editableUntil ? formatDateTime(saleDetail.editableUntil) : '-'}</strong></div>
-                  <div><span>Total</span><strong>{formatCurrency(saleDetail.finalAmount)}</strong></div>
+          <div className="flex flex-col gap-6">
+            <Card className="bg-slate-50/50 border border-slate-200/60 rounded-lg shadow-none">
+              <CardHeader title="Bill overview" subtitle="Core checkout information" className="pb-2" />
+              <CardBody className="p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+                  <div className="flex flex-col gap-0.5"><span className="text-xs font-medium text-slate-400 uppercase">Customer</span><strong className="text-slate-800 font-semibold">{saleDetail.customer?.fullName || saleDetail.member?.fullName || 'Walk-in customer'}</strong></div>
+                  <div className="flex flex-col gap-0.5"><span className="text-xs font-medium text-slate-400 uppercase">Cashier</span><strong className="text-slate-800 font-semibold">{saleDetail.cashier?.fullName || saleDetail.createdBy?.fullName || '-'}</strong></div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-slate-400 uppercase">Status</span>
+                    <div><Badge tone={saleDetail.status === 'CANCELLED' ? 'danger' : saleDetail.status === 'PENDING' ? 'warning' : 'success'}>{saleDetail.status}</Badge></div>
+                  </div>
+                  <div className="flex flex-col gap-0.5"><span className="text-xs font-medium text-slate-400 uppercase">Payment</span><strong className="text-slate-800 font-semibold">{saleDetail.paymentMethod}</strong></div>
+                  <div className="flex flex-col gap-0.5"><span className="text-xs font-medium text-slate-400 uppercase">Editable until</span><strong className="text-slate-800 font-semibold">{saleDetail.editableUntil ? formatDateTime(saleDetail.editableUntil) : '-'}</strong></div>
+                  <div className="flex flex-col gap-0.5"><span className="text-xs font-medium text-slate-400 uppercase">Total</span><strong className="text-slate-900 font-bold text-base">{formatCurrency(saleDetail.finalAmount)}</strong></div>
                 </div>
               </CardBody>
             </Card>
 
-            <Card>
+            <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
               <CardHeader title="Products in this sale" subtitle="Every product line in this bill" />
-              <CardBody>
-                <DataTable
-                  columns={[
-                    { key: 'product', label: 'Product', render: (row) => row.product?.name || '-' },
-                    { key: 'sku', label: 'SKU', render: (row) => row.product?.sku || '-' },
-                    { key: 'quantity', label: 'Qty' },
-                    { key: 'productPrice', label: 'Price', render: (row) => formatCurrency(row.productPrice) },
-                    { key: 'discountPercent', label: 'Discount %' },
-                    { key: 'totalPrice', label: 'Line total', render: (row) => formatCurrency(row.totalPrice) },
-                  ]}
-                  rows={saleDetail.items || saleDetail.billItems || []}
-                />
+              <CardBody className="p-0">
+                <div className="border border-slate-100 rounded-lg overflow-hidden m-4 bg-white">
+                  <DataTable
+                    columns={[
+                      { key: 'product', label: 'Product', render: (row) => row.product?.name || '-' },
+                      { key: 'sku', label: 'SKU', render: (row) => row.product?.sku || '-' },
+                      { key: 'quantity', label: 'Qty' },
+                      { key: 'productPrice', label: 'Price', render: (row) => formatCurrency(row.productPrice) },
+                      { key: 'discountPercent', label: 'Discount %' },
+                      { key: 'totalPrice', label: 'Line total', render: (row) => formatCurrency(row.totalPrice) },
+                    ]}
+                    rows={saleDetail.items || saleDetail.billItems || []}
+                  />
+                </div>
               </CardBody>
             </Card>
 
-            <Card>
+            <Card className="bg-white border border-slate-200 rounded-lg shadow-none">
               <CardHeader title="Edit and inventory logs" subtitle="Traceability for sale updates" />
-              <CardBody>
-                {saleAudit.length ? (
-                  <DataTable
-                    columns={[
-                      { key: 'createdAt', label: 'When', render: (row) => formatDateTime(row.createdAt) },
-                      { key: 'reason', label: 'Reason' },
-                      { key: 'product', label: 'Product', render: (row) => row.product?.name || '-' },
-                      { key: 'changeAmount', label: 'Stock Δ' },
-                      { key: 'updatedBy', label: 'By', render: (row) => row.updatedBy?.fullName || '-' },
-                    ]}
-                    rows={saleAudit}
-                  />
-                ) : (
-                  <EmptyState title="No edit logs yet" description="Logs will appear if this sale is edited/cancelled or inventory is adjusted." />
-                )}
+              <CardBody className="p-0">
+                <div className="border border-slate-100 rounded-lg overflow-hidden m-4 bg-white">
+                  {saleAudit.length ? (
+                    <DataTable
+                      columns={[
+                        { key: 'createdAt', label: 'When', render: (row) => formatDateTime(row.createdAt) },
+                        { key: 'reason', label: 'Reason' },
+                        { key: 'product', label: 'Product', render: (row) => row.product?.name || '-' },
+                        { key: 'changeAmount', label: 'Stock Δ' },
+                        { key: 'updatedBy', label: 'By', render: (row) => row.updatedBy?.fullName || '-' },
+                      ]}
+                      rows={saleAudit}
+                    />
+                  ) : (
+                    <div className="p-6">
+                      <EmptyState title="No edit logs yet" description="Logs will appear if this sale is edited/cancelled or inventory is adjusted." />
+                    </div>
+                  )}
+                </div>
               </CardBody>
             </Card>
           </div>
         ) : (
-          <div className="empty-table">Loading details...</div>
+          <div className="p-12 text-center text-sm text-slate-400 font-medium">Loading details...</div>
         )}
       </Modal>
     </div>
