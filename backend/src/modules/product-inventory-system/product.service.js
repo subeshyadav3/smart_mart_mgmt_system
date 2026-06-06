@@ -81,7 +81,20 @@ export const getProductById = async (id) => {
 };
 
 export const listProducts = async (query = {}) => {
-  const { page = 1, limit = 20, search, categoryId } = query;
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    categoryId,
+    status,
+    minPrice,
+    maxPrice,
+    minStock,
+    maxStock,
+    lowStock,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = query;
   const skip = (Number(page) - 1) * Number(limit);
 
   const where = {};
@@ -93,11 +106,42 @@ export const listProducts = async (query = {}) => {
     ];
   }
   if (categoryId) where.categoryId = categoryId;
+  if (status) where.status = status;
 
-  const [data, total] = await Promise.all([
-    prisma.product.findMany({ where, skip, take: Number(limit), orderBy: { createdAt: "desc" } }),
+  const hasMinPrice = minPrice !== undefined && minPrice !== null && minPrice !== "";
+  const hasMaxPrice = maxPrice !== undefined && maxPrice !== null && maxPrice !== "";
+  if (hasMinPrice || hasMaxPrice) {
+    where.sellingPrice = {};
+    if (hasMinPrice) where.sellingPrice.gte = Number(minPrice).toString();
+    if (hasMaxPrice) where.sellingPrice.lte = Number(maxPrice).toString();
+  }
+
+  const hasMinStock = minStock !== undefined && minStock !== null && minStock !== "";
+  const hasMaxStock = maxStock !== undefined && maxStock !== null && maxStock !== "";
+  if (hasMinStock || hasMaxStock) {
+    where.stockQuantity = {};
+    if (hasMinStock) where.stockQuantity.gte = Number(minStock);
+    if (hasMaxStock) where.stockQuantity.lte = Number(maxStock);
+  }
+
+  if (String(lowStock).toLowerCase() === "true") {
+    // Cannot compare two model fields directly in standard Prisma where.
+    // Apply low-stock comparison after fetch.
+  }
+
+  const safeSortBy = ["createdAt", "updatedAt", "name", "stockQuantity", "sellingPrice"].includes(sortBy)
+    ? sortBy
+    : "createdAt";
+  const safeSortOrder = String(sortOrder).toLowerCase() === "asc" ? "asc" : "desc";
+
+  const [rawData, total] = await Promise.all([
+    prisma.product.findMany({ where, skip, take: Number(limit), orderBy: { [safeSortBy]: safeSortOrder } }),
     prisma.product.count({ where }),
   ]);
+
+  const data = String(lowStock).toLowerCase() === "true"
+    ? rawData.filter((product) => product.stockQuantity <= product.minimumStock)
+    : rawData;
 
   return {
     success: true,

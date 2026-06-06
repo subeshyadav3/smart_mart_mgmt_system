@@ -15,7 +15,7 @@ export const authMiddleware = (req, res, next) => {
     req.user = {
       id: decoded.id,
       role: decoded.role,
-      type: decoded.type, // STAFF | MEMBER
+      type: decoded.type || (decoded.role === "MEMBER" ? "MEMBER" : "STAFF"), // STAFF | MEMBER
     };
 
     next();

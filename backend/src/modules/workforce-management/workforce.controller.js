@@ -40,3 +40,33 @@ export const updateStaffStatus = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getStaffById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const staff = await workforceService.getStaffById(id);
+    res.json({ success: true, data: staff });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateStaff = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const staff = await workforceService.updateStaff(id, req.body);
+    res.json({ success: true, data: staff });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteStaff = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await workforceService.deleteStaff(id);
+    res.json({ success: true, message: "Staff deleted" });
+  } catch (err) {
+    next(err);
+  }
+};

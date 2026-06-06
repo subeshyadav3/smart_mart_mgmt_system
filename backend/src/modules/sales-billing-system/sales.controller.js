@@ -44,3 +44,33 @@ export const cancelSale = async (req, res, next) => {
     next(err);
   }
 };
+
+export const updateSale = async (req, res, next) => {
+  try {
+    const result = await salesService.updateSale(req.params.id, req.body, req.user?.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getSaleAuditTrail = async (req, res, next) => {
+  try {
+    const result = await salesService.getSaleAuditTrail(req.params.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getSalesAnalytics = async (req, res, next) => {
+  try {
+    const result = await salesService.getSalesAnalytics({
+      staffId: req.query.staffId,
+      days: req.query.days,
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};

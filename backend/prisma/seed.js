@@ -107,7 +107,7 @@ async function main() {
     },
     {
       fullName: 'Manisha Shrestha',
-      email: 'manisha.shrestha@shopease.com',
+      email: '',
       password: staffPwd,
       phoneNumber: '9841200006',
       role: Role.STAFF,

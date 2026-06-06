@@ -45,7 +45,7 @@ export const staffLogin = async ({ email, password }) => {
     statusCode: 200,
     message: "Login successful",
     data: {
-      user: sanitizeUser(staff),
+      user: { ...sanitizeUser(staff), type: "STAFF" },
       token,
     },
   };
@@ -91,7 +91,7 @@ export const memberLogin = async ({
     statusCode: 200,
     message: "Login successful",
     data: {
-      user: sanitizeUser(member),
+      user: { ...sanitizeUser(member), type: "MEMBER" },
       token,
     },
   };
@@ -135,7 +135,7 @@ export const registerMember = async ({
     success: true,
     statusCode: 201,
     message: "Membership registration successful",
-    data: sanitizeUser(member),
+    data: { ...sanitizeUser(member), type: "MEMBER" },
   };
 };
 
@@ -177,6 +177,44 @@ export const staffCreateMember = async ({
     success: true,
     statusCode: 201,
     message: "Member created successfully",
-    data: sanitizeUser(member),
+    data: { ...sanitizeUser(member), type: "MEMBER" },
   };
+};
+
+export const updateCurrentUser = async (user, payload = {}) => {
+  if (!user?.id || !user?.type) {
+    throw new AppError("Not authenticated", 401);
+  }
+
+  const data = {};
+  const password = payload.password?.trim();
+
+  if (user.type === "MEMBER") {
+    if (payload.fullName !== undefined) data.fullName = payload.fullName;
+    if (payload.phoneNumber !== undefined) data.phoneNumber = payload.phoneNumber;
+    if (password) data.password = await hashPassword(password);
+    const updated = await prisma.member.update({ where: { id: user.id }, data });
+    return {
+      success: true,
+      statusCode: 200,
+      message: "Profile updated",
+      data: sanitizeUser(updated),
+    };
+  }
+
+  if (user.type === "STAFF") {
+    if (payload.fullName !== undefined) data.fullName = payload.fullName;
+    if (payload.email !== undefined) data.email = payload.email;
+    if (payload.phoneNumber !== undefined) data.phoneNumber = payload.phoneNumber;
+    if (password) data.password = await hashPassword(password);
+    const updated = await prisma.staff.update({ where: { id: user.id }, data });
+    return {
+      success: true,
+      statusCode: 200,
+      message: "Profile updated",
+      data: sanitizeUser(updated),
+    };
+  }
+
+  throw new AppError("Unsupported user type", 400);
 };

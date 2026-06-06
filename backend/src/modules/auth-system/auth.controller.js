@@ -58,7 +58,7 @@ export const getCurrentUser = async (req, res, next) => {
     }
 
     const member = await prisma.member.findUnique({ where: { id } });
-    return res.json({ success: true, data: sanitize(member) });
+    return res.json({ success: true, data: { ...sanitize(member), type: "MEMBER" } });
   } catch (err) {
     next(err);
   }
@@ -66,6 +66,15 @@ export const getCurrentUser = async (req, res, next) => {
 
 export const logout = async (req, res) => {
   return res.json({ success: true, message: "Logged out" });
+};
+
+export const updateCurrentUser = async (req, res, next) => {
+  try {
+    const result = await authService.updateCurrentUser(req.user, req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
 };
 
 export const getAllMembers = async (req, res, next) => {
@@ -94,6 +103,32 @@ export const updateMemberStatus = async (req, res, next) => {
     const { isActive } = req.body;
     const member = await prisma.member.update({ where: { id }, data: { isActive } });
     res.json({ success: true, data: sanitize(member) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateMember = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const payload = req.body || {};
+
+    if (payload.password) {
+      payload.password = await hashPassword(payload.password);
+    }
+
+    const member = await prisma.member.update({ where: { id }, data: payload });
+    res.json({ success: true, data: sanitize(member) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteMember = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await prisma.member.delete({ where: { id } });
+    res.json({ success: true, message: "Member deleted" });
   } catch (err) {
     next(err);
   }

@@ -27,3 +27,23 @@ export const updateStaffStatus = async (id, isActive) => {
   const staff = await prisma.staff.update({ where: { id }, data: { isActive } });
   return sanitize(staff);
 };
+
+export const getStaffById = async (id) => {
+  const staff = await prisma.staff.findUnique({ where: { id } });
+  return sanitize(staff);
+};
+
+export const updateStaff = async (id, payload = {}) => {
+  const updates = { ...payload };
+  if (updates.password) {
+    updates.password = await hashPassword(updates.password);
+  }
+
+  const staff = await prisma.staff.update({ where: { id }, data: updates });
+  return sanitize(staff);
+};
+
+export const deleteStaff = async (id) => {
+  await prisma.staff.delete({ where: { id } });
+  return { id };
+};

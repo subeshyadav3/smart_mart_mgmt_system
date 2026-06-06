@@ -10,6 +10,9 @@ import {
   getAllMembers,
   getSingleMember,
   updateMemberStatus,
+  updateMember,
+  deleteMember,
+  updateCurrentUser,
 } from "./auth.controller.js";
 
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
@@ -23,6 +26,7 @@ router.post("/member/login", memberLogin);
 router.post("/member/register", registerMember);
 
 router.get("/me", authMiddleware, getCurrentUser);
+router.put("/me", authMiddleware, updateCurrentUser);
 router.post("/logout", authMiddleware, logout);
 
 router.post("/member/create", authMiddleware, authorizeRoles("ADMIN", "STAFF"), staffCreateMember);
@@ -32,6 +36,8 @@ router.get("/members", authMiddleware, authorizeRoles("ADMIN", "STAFF"), getAllM
 router.get("/members/:id", authMiddleware, authorizeRoles("ADMIN", "STAFF"), getSingleMember);
 
 router.patch("/members/:id/status", authMiddleware, authorizeRoles("ADMIN", "STAFF"), updateMemberStatus);
+router.put("/members/:id", authMiddleware, authorizeRoles("ADMIN", "STAFF"), updateMember);
+router.delete("/members/:id", authMiddleware, authorizeRoles("ADMIN", "STAFF"), deleteMember);
 
 
 
