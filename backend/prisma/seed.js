@@ -134,6 +134,7 @@ async function main() {
     const memberPwd = await hashPassword('Member@123')
     
     const memberData = [
+        { membershipId: 'MBR-TEST-0001', fullName: 'Test Member',     phoneNumber: '9801000999', password: memberPwd, loyaltyPoints: 100, totalSpent: 1000,   createdAt: daysAgo(30)  },
       { membershipId: 'MBR-2024-0001', fullName: 'Ramesh Hamal',     phoneNumber: '9801001001', password: memberPwd, loyaltyPoints: 3450, totalSpent: 34500,  createdAt: daysAgo(340) },
       { membershipId: 'MBR-2024-0002', fullName: 'Kamala Devi',      phoneNumber: '9801001002', password: memberPwd, loyaltyPoints: 1280, totalSpent: 12800,  createdAt: daysAgo(310) },
       { membershipId: 'MBR-2024-0003', fullName: 'Suresh Poudel',    phoneNumber: '9801001003', password: memberPwd, loyaltyPoints: 5670, totalSpent: 56700,  createdAt: daysAgo(280) },
@@ -150,6 +151,7 @@ async function main() {
     memberData.map(d => prisma.member.create({ data: { ...d, totalSpent: d.totalSpent } }))
   )
   console.log(`✅ Created ${memberRecords.length} members`)
+  console.log('🧪 Default member test login: MBR-TEST-0001 / Member@123')
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CATEGORIES  (8)
